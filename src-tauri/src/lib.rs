@@ -1,5 +1,6 @@
 mod ajazz;
 mod devices;
+mod mouse_buttons;
 mod watcher;
 
 use devices::Peripheral;
@@ -244,6 +245,30 @@ fn set_settings(monitor: State<Monitor>, settings: Settings) -> Result<(), Strin
     Ok(())
 }
 
+/// Roda a conversa com o mouse fora da thread principal (leva até ~2 s).
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T, String> + Send + 'static) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(f).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn get_mouse_buttons() -> Result<Vec<mouse_buttons::MouseButton>, String> {
+    blocking(mouse_buttons::read_buttons).await
+}
+
+#[tauri::command]
+async fn set_mouse_button(
+    slot: usize,
+    action: mouse_buttons::ButtonAction,
+    macro_steps: Option<Vec<mouse_buttons::MacroStep>>,
+) -> Result<Vec<mouse_buttons::MouseButton>, String> {
+    blocking(move || mouse_buttons::write_button(slot, &action, macro_steps.as_deref())).await
+}
+
+#[tauri::command]
+async fn reset_mouse_buttons() -> Result<Vec<mouse_buttons::MouseButton>, String> {
+    blocking(mouse_buttons::reset_buttons).await
+}
+
 pub fn run() {
     tauri::Builder::default()
         // Precisa ser o primeiro plugin: uma segunda execução só reabre a janela.
@@ -253,7 +278,10 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![MINIMIZED_ARG]),
         ))
-        .invoke_handler(tauri::generate_handler![list_devices, refresh_devices, get_settings, set_settings])
+        .invoke_handler(tauri::generate_handler![
+            list_devices, refresh_devices, get_settings, set_settings,
+            get_mouse_buttons, set_mouse_button, reset_mouse_buttons,
+        ])
         .on_window_event(|window, event| {
             // Fechar a janela só a esconde; o monitor continua na bandeja.
             if let WindowEvent::CloseRequested { api, .. } = event {

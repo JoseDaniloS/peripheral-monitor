@@ -17,7 +17,7 @@
 
 use std::time::{Duration, Instant};
 
-const REPORT_LEN: usize = 32;
+pub const REPORT_LEN: usize = 32;
 const QUERY_DEVICE_INFO: u8 = 0x10;
 const STATUS_PUSH: u8 = 0xC0;
 const CHARGING_BYTE: usize = 4 + 8;
@@ -96,6 +96,26 @@ impl Link {
         let mut request = [0u8; REPORT_LEN + 1];
         request[1] = QUERY_DEVICE_INFO;
         self.dev.write(&request).is_ok()
+    }
+
+    /// Envia um relatório de 32 bytes e espera o eco/resposta com o mesmo
+    /// `byte0` (família ou id da consulta) e modo 0x01.
+    /// `Ok(None)` se o mouse não respondeu dentro do prazo.
+    pub fn transact(&self, report: &[u8; REPORT_LEN], timeout: Duration) -> Result<Option<[u8; REPORT_LEN]>, String> {
+        let mut request = [0u8; REPORT_LEN + 1];
+        request[1..].copy_from_slice(report);
+        self.dev.write(&request).map_err(|e| format!("Falha ao enviar ao mouse: {e}"))?;
+        let mut buf = [0u8; 64];
+        let deadline = Instant::now() + timeout;
+        while Instant::now() < deadline {
+            let n = self.dev.read_timeout(&mut buf, 200).map_err(|e| format!("Falha ao ler do mouse: {e}"))?;
+            if n >= REPORT_LEN && buf[0] == report[0] && buf[2] & 0x0F != 0 {
+                let mut reply = [0u8; REPORT_LEN];
+                reply.copy_from_slice(&buf[..REPORT_LEN]);
+                return Ok(Some(reply));
+            }
+        }
+        Ok(None)
     }
 
     /// Espera até `timeout` por um relatório. `Err` se o dispositivo sumiu.
