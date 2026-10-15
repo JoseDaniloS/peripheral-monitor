@@ -1,0 +1,58 @@
+# Confere se o projeto compila e passa nos testes em todo PR para a main.
+# É a verificação obrigatória da regra de proteção da main.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Somente leitura: um PR de fork não consegue alterar nada no repositório.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build e testes (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      # Actions fixadas por commit: uma tag pode ser movida, o SHA não.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Instalar dependências do frontend
+        run: npm ci
+
+      # tsc + vite; também gera o dist/ que o tauri-build exige.
+      - name: Build do frontend
+        run: npm run build
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          toolchain: stable
+          components: clippy
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+
+      # Os testes marcados com #[ignore] precisam do mouse/teclado de verdade e não rodam aqui.
+      - name: Testes do backend
+        working-directory: src-tauri
+        run: cargo test --locked --lib
+
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --locked --lib -- -D warnings

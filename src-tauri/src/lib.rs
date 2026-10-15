@@ -72,7 +72,7 @@ fn sorted(monitor: &Monitor, map: &HashMap<String, Peripheral>) -> Vec<Periphera
         device.battery_percent = battery.and_then(|b| b.percent);
         device.battery_charging = battery.is_some_and(|b| b.charging);
     }
-    list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    list.sort_by_key(|d| d.name.to_lowercase());
     list
 }
 

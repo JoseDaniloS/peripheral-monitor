@@ -34,3 +34,9 @@ cargo test -- --ignored --nocapture     # lista os dispositivos e lê a bateria 
 - Carregando (suporte de pinos ou cabo) vem do aviso `C0 01 <bateria> <carregando>` que o mouse envia na hora e do byte 12 da resposta `0x10`. Durante a carga o mouse informa 100 % fixo, então o app mostra a última leitura real até ele sair do carregador.
 - Com o mouse dormindo o receptor pode não responder; a última leitura é mantida enquanto o receptor estiver conectado.
 - Dispositivos virtuais (ex.: controle Xbox emulado por drivers como ViGEm) podem aparecer como uma entrada extra.
+
+## Contribuindo
+Contribuições entram somente por pull request: a `main` é protegida, a CI precisa passar e o mantenedor revisa cada PR. Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Licença
+[GPL-3.0](LICENSE). O protocolo do mouse AJAZZ foi documentado pelo projeto [Ajazzy](https://github.com/Geovane2dd/Ajazzy), também GPL-3.0.

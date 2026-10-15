@@ -26,10 +26,12 @@ pub fn register(tx: Sender<()>) -> bool {
         0 // ERROR_SUCCESS
     }
 
-    let mut filter = CM_NOTIFY_FILTER::default();
-    filter.cbSize = std::mem::size_of::<CM_NOTIFY_FILTER>() as u32;
-    filter.Flags = CM_NOTIFY_FILTER_FLAG_ALL_INTERFACE_CLASSES;
-    filter.FilterType = CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE;
+    let filter = CM_NOTIFY_FILTER {
+        cbSize: std::mem::size_of::<CM_NOTIFY_FILTER>() as u32,
+        Flags: CM_NOTIFY_FILTER_FLAG_ALL_INTERFACE_CLASSES,
+        FilterType: CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE,
+        ..Default::default()
+    };
 
     // O contexto e o handle ficam vivos até o processo terminar.
     let context = Box::into_raw(Box::new(tx));
